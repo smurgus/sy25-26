@@ -1,0 +1,1 @@
+I added a screen shake function by adding duration and intensity and applying it to the drawing section i used ai to give me the code for the duration and intensity and then asked it to tell me where to apply it
