@@ -1,0 +1,6 @@
+Make program for a website called tome raiders
+ with comic books around 15$ light books 20$ and big books 30$ 
+putting the books with the highest reviews first(origin)
+ with the option to put the cheapest first and vice versa
+list the amount in stock 
+make a comments and review section under the product
