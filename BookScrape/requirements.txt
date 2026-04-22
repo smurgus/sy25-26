@@ -1,6 +1,3 @@
-Make program for a website called tome raiders
- with comic books around 15$ light books 20$ and big books 30$ 
-putting the books with the highest reviews first(origin)
- with the option to put the cheapest first and vice versa
-list the amount in stock 
-make a comments and review section under the product
+Make program called tome raiders that takes the most popular books and can be searched by author book name and genre
+It should also be able to filter books in order from cheap to expensive and highest to lowest rating and vice versa 
+It should pull all the information and prices
