@@ -1,57 +1,128 @@
 ﻿import requests
 from bs4 import BeautifulSoup
-from urllib.robotparser import RobotFileParser
-from urllib.parse import urlparse
 
-def scrape_with_permission(target_url):
-    # 1. Setup the User-Agent
-    user_agent = "EducationalScraperBot/1.0"
-    
-    # 2. Find and Parse the robots.txt file
-    parsed_url = urlparse(target_url)
-    base_url = f"{parsed_url.scheme}://{parsed_url.netloc}"
-    robots_url = f"{base_url}/robots.txt"
-    
-    rp = RobotFileParser()
-    rp.set_url(robots_url)
-    
-    try:
-        rp.read()
-        can_scrape = rp.can_fetch(user_agent, target_url)
-    except Exception as e:
-        print(f"Could not read robots.txt ({e}), proceeding with caution...")
-        can_scrape = True
-  
-    # 3. Logic: Only scrape if allowed
-    if can_scrape:
-        print(f"✅ Permissions verified for: {target_url}")
-        
-        try:
-            # Set headers to look like a real request
-            headers = {'User-Agent': user_agent}
-            response = requests.get(target_url, headers=headers, timeout=10)
-            
-            # Check if the page loaded successfully (Status 200)
-            response.raise_for_status()
-            
-            # 4. Parse the HTML
-            soup = BeautifulSoup(response.text, 'html.parser')
-            
-            # Example Extraction: Page Title and all H1 headers
-            print(f"\n--- Scraping Results ---")
-            print(f"Site Title: {soup.title.string if soup.title else 'No Title Found'}")
-            
-            print("Main Headlines (H1):")
-            for h1 in soup.find_all('h1'):
-                print(f"- {h1.text.strip()}")
-                
-        except requests.exceptions.RequestException as e:
-            print(f"❌ Failed to fetch the page: {e}")
-            
-    else:
-        print(f"🚫 Access Denied: {target_url} is restricted by robots.txt")
-  
-# Run the combined script
+class TomeRaiders:
+    def __init__(self):
+        self.books = []
+
+    def fetch_books(self, url):
+        headers = {'User-Agent': 'TomeRaidersBot/1.0'}
+        response = requests.get(url, headers=headers)
+        response.raise_for_status()
+
+        soup = BeautifulSoup(response.text, 'html.parser')
+        book_list = soup.select('article.product_pod')
+
+        for book in book_list:
+            title = book.h3.a['title']
+            relative_url = book.h3.a['href']
+            book_url = "https://books.toscrape.com/catalogue/" + relative_url.replace('../../../', '')
+            price_text = book.find('p', class_='price_color').text.strip('£')
+            try:
+                price = float(price_text)
+            except:
+                price = 0.0
+            rating_class = book.find('p', class_='star-rating')['class'][1]
+            rating = self.convert_rating(rating_class)
+
+            # For demo: set author and genre as 'Unknown'
+            author = 'Unknown'
+            genre = 'Unknown'
+
+            self.books.append({
+                'title': title,
+                'url': book_url,
+                'price': price,
+                'rating': rating,
+                'author': author,
+                'genre': genre
+            })
+
+    def convert_rating(self, rating_str):
+        ratings = {
+            'One': 1,
+            'Two': 2,
+            'Three': 3,
+            'Four': 4,
+            'Five': 5
+        }
+        return ratings.get(rating_str, 0)
+
+    def search_by_title(self, title):
+        return [b for b in self.books if title.lower() in b['title'].lower()]
+
+    def search_by_author(self, author):
+        return [b for b in self.books if author.lower() in b['author'].lower()]
+
+    def search_by_genre(self, genre):
+        return [b for b in self.books if genre.lower() in b['genre'].lower()]
+
+    def filter_by_price(self, ascending=True):
+        return sorted(self.books, key=lambda x: x['price'], reverse=not ascending)
+
+    def filter_by_rating(self, highest=True):
+        return sorted(self.books, key=lambda x: x['rating'], reverse=highest)
+
+    def display_books(self, books):
+        for b in books:
+            print(f"Title: {b['title']}")
+            print(f"Author: {b['author']}")
+            print(f"Genre: {b['genre']}")
+            print(f"Price: £{b['price']}")
+            print(f"Rating: {b['rating']} stars")
+            print(f"URL: {b['url']}")
+            print("-" * 50)
+
+def main():
+    print("Welcome to Tome Raiders!")
+    url = input("Enter the URL of the book category to scrape (e.g., https://books.toscrape.com/catalogue/category/books/travel_2/index.html): ").strip()
+
+    raider = TomeRaiders()
+    print("Fetching books, please wait...")
+    raider.fetch_books(url)
+    print(f"Fetched {len(raider.books)} books.\n")
+
+    while True:
+        print("\nWhat would you like to do?")
+        print("1. View all books")
+        print("2. Search by title")
+        print("3. Search by author")
+        print("4. Search by genre")
+        print("5. Filter by price")
+        print("6. Filter by rating")
+        print("7. Exit")
+
+        choice = input("Enter your choice (1-7): ").strip()
+
+        if choice == '1':
+            raider.display_books(raider.books)
+        elif choice == '2':
+            title = input("Enter title keyword: ").strip()
+            results = raider.search_by_title(title)
+            raider.display_books(results)
+        elif choice == '3':
+            author = input("Enter author keyword: ").strip()
+            results = raider.search_by_author(author)
+            raider.display_books(results)
+        elif choice == '4':
+            genre = input("Enter genre keyword: ").strip()
+            results = raider.search_by_genre(genre)
+            raider.display_books(results)
+        elif choice == '5':
+            order = input("Sort by price ascending or descending? (a/d): ").strip().lower()
+            ascending = True if order == 'a' else False
+            results = raider.filter_by_price(ascending=ascending)
+            raider.display_books(results)
+        elif choice == '6':
+            order = input("Sort by rating highest or lowest? (h/l): ").strip().lower()
+            highest = True if order == 'h' else False
+            results = raider.filter_by_rating(highest=highest)
+            raider.display_books(results)
+        elif choice == '7':
+            print("Goodbye!")
+            break
+        else:
+            print("Invalid choice. Please try again.")
+
 if __name__ == "__main__":
-    # You can change this to any URL you want to test
-    scrape_with_permission("https://books.toscrape.com/")
+    main()
