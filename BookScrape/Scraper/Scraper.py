@@ -19,12 +19,18 @@ class TomeRaiders:
             relative_url = book.h3.a['href']
             book_url = "https://books.toscrape.com/catalogue/" + relative_url.replace('../../../', '')
 
+            # Fetch author and genre from the book's detail page
             author, genre = self.fetch_book_details(book_url)
 
-            price_text = book.find('p', class_='price_color').text.strip('£')
-            try:
-                price = float(price_text)
-            except:
+            # Extract price safely
+            price_element = book.find('p', class_='price_color')
+            if price_element:
+                price_str = price_element.text.strip().lstrip('£')
+                try:
+                    price = float(price_str)
+                except:
+                    price = 0.0
+            else:
                 price = 0.0
 
             rating_class = book.find('p', class_='star-rating')['class'][1]
@@ -48,17 +54,16 @@ class TomeRaiders:
             response = requests.get(url, headers=headers)
             response.raise_for_status()
             soup = BeautifulSoup(response.text, 'html.parser')
-
+            # Author
             author = 'Unknown'
             author_tag = soup.find('a', href=True, rel='author')
             if author_tag:
                 author = author_tag.text.strip()
-
+            # Genre
             genre = 'Unknown'
             breadcrumb = soup.select('ul.breadcrumb li a')
             if len(breadcrumb) >= 3:
                 genre = breadcrumb[-2].text.strip()
-
             return author, genre
         except Exception:
             return 'Unknown', 'Unknown'
@@ -184,3 +189,48 @@ def main():
 
 if __name__ == "__main__":
     main()
+def fetch_books(self, url):
+    headers = {'User-Agent': 'TomeRaidersBot/1.0'}
+    response = requests.get(url, headers=headers)
+    response.raise_for_status()
+
+    soup = BeautifulSoup(response.text, 'html.parser')
+    book_list = soup.select('article.product_pod')
+
+    for book in book_list:
+        title = book.h3.a['title']
+        relative_url = book.h3.a['href']
+        book_url = "https://books.toscrape.com/catalogue/" + relative_url.replace('../../../', '')
+
+        # Fetch author and genre from the book's detail page
+        author, genre = self.fetch_book_details(book_url)
+
+        # Extract price with debugging and robustness
+        price_element = book.find('p', class_='price_color')
+        if price_element:
+            price_str = price_element.text.strip()
+            print(f"Debug: Raw price string for '{title}': '{price_str}'")  # Debug print
+            price_str = price_str.lstrip('£').strip()
+            try:
+                price = float(price_str)
+            except Exception as e:
+                print(f"Error parsing price for '{title}': {e}")
+                price = 56.0  # Default price if parsing fails, can be set to 0.0 or any other value as needed
+        else:
+            print(f"Price element not found for '{title}'.")
+            price = 0.0
+
+        rating_class = book.find('p', class_='star-rating')['class'][1]
+        rating = self.convert_rating(rating_class)
+
+        self.books.append({
+            'title': title,
+            'url': book_url,
+            'price': price,
+            'rating': rating,
+            'author': author,
+            'genre': genre
+        })
+
+        # Optional delay
+        time.sleep(0.2)
