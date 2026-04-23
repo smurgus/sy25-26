@@ -1,5 +1,6 @@
 ﻿import requests
 from bs4 import BeautifulSoup
+import time
 
 class TomeRaiders:
     def __init__(self):
@@ -17,17 +18,17 @@ class TomeRaiders:
             title = book.h3.a['title']
             relative_url = book.h3.a['href']
             book_url = "https://books.toscrape.com/catalogue/" + relative_url.replace('../../../', '')
+
+            author, genre = self.fetch_book_details(book_url)
+
             price_text = book.find('p', class_='price_color').text.strip('£')
             try:
                 price = float(price_text)
             except:
                 price = 0.0
+
             rating_class = book.find('p', class_='star-rating')['class'][1]
             rating = self.convert_rating(rating_class)
-
-            # For demo: set author and genre as 'Unknown'
-            author = 'Unknown'
-            genre = 'Unknown'
 
             self.books.append({
                 'title': title,
@@ -37,6 +38,30 @@ class TomeRaiders:
                 'author': author,
                 'genre': genre
             })
+
+            # Delay for politeness
+            time.sleep(0.2)
+
+    def fetch_book_details(self, url):
+        headers = {'User-Agent': 'TomeRaidersBot/1.0'}
+        try:
+            response = requests.get(url, headers=headers)
+            response.raise_for_status()
+            soup = BeautifulSoup(response.text, 'html.parser')
+
+            author = 'Unknown'
+            author_tag = soup.find('a', href=True, rel='author')
+            if author_tag:
+                author = author_tag.text.strip()
+
+            genre = 'Unknown'
+            breadcrumb = soup.select('ul.breadcrumb li a')
+            if len(breadcrumb) >= 3:
+                genre = breadcrumb[-2].text.strip()
+
+            return author, genre
+        except Exception:
+            return 'Unknown', 'Unknown'
 
     def convert_rating(self, rating_str):
         ratings = {
@@ -64,6 +89,9 @@ class TomeRaiders:
         return sorted(self.books, key=lambda x: x['rating'], reverse=highest)
 
     def display_books(self, books):
+        if not books:
+            print("No books found.")
+            return
         for b in books:
             print(f"Title: {b['title']}")
             print(f"Author: {b['author']}")
@@ -73,14 +101,44 @@ class TomeRaiders:
             print(f"URL: {b['url']}")
             print("-" * 50)
 
+def get_categories():
+    url = "https://books.toscrape.com/"
+    headers = {'User-Agent': 'TomeRaidersBot/1.0'}
+    response = requests.get(url, headers=headers)
+    response.raise_for_status()
+    soup = BeautifulSoup(response.text, 'html.parser')
+    categories = {}
+    for li in soup.select('ul.nav li ul li a'):
+        name = li.text.strip()
+        link = "https://books.toscrape.com/" + li['href']
+        categories[name] = link
+    return categories
+
 def main():
     print("Welcome to Tome Raiders!")
-    url = input("Enter the URL of the book category to scrape (e.g., https://books.toscrape.com/catalogue/category/books/travel_2/index.html): ").strip()
+    categories = get_categories()
+    print("\nAvailable categories:")
+    for idx, name in enumerate(categories.keys(), 1):
+        print(f"{idx}. {name}")
 
+    choice = input("Select a category by number: ").strip()
+
+    try:
+        choice_idx = int(choice)
+        if choice_idx < 1 or choice_idx > len(categories):
+            print("Invalid selection. Exiting.")
+            return
+        selected_category = list(categories.items())[choice_idx - 1]
+    except:
+        print("Invalid input. Exiting.")
+        return
+
+    category_name, category_url = selected_category
+    print(f"\nScraping books from category: {category_name}")
     raider = TomeRaiders()
     print("Fetching books, please wait...")
-    raider.fetch_books(url)
-    print(f"Fetched {len(raider.books)} books.\n")
+    raider.fetch_books(category_url)
+    print(f"Fetched {len(raider.books)} books from {category_name}.\n")
 
     while True:
         print("\nWhat would you like to do?")
