@@ -1,3 +1,2 @@
 Make program called tome raiders that takes the most popular books and can be searched by author book name and genre
-It should also be able to filter books in order from cheap to expensive and highest to lowest rating and vice versa 
-It should pull all the information and prices
+It should also be able to filter books in order from cheap to expensive and highest to lowest rating and vice versa
