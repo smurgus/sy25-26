@@ -1,0 +1,5 @@
+The code won't show actual prices of books when they are searched up and will show up as 0.00$ with any book no matter how you search it.
+
+
+
+The code automatically asks for a category and doesn't give an option to just list out all the best selling books.
